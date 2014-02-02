@@ -1,6 +1,6 @@
 #BundleFilesMinify
 
-**Note:** This module is only written for the forum post about [pluimveeweb](http://processwire.com/talk/topic/5432-launch-wwwpluimveewebnl/?hl=pluimveeweb). It's should be functional, as it is, but it's not in production right now. I do use a similar technique in Pluimveeweb.nl, but it's not containing the module part.
+**Note:** This module is only written for the forum post about [pluimveeweb](http://processwire.com/talk/topic/5432-launch-wwwpluimveewebnl/?hl=pluimveeweb). It's should be functional as it is, but it's not in production right now. I do use a similar technique in Pluimveeweb.nl, but it's not containing the module part.
 
 Bundle files minify is a module, class & template file to minify and concatenate all scripts and styles in a FilenameArray and server one file back to the browser.
 
