@@ -4,7 +4,7 @@
 
 Bundle files minify is a module, class & template file to minify and concatenate all scripts and styles in a FilenameArray and server one file back to the browser.
 
-There are several great minifiers already for ProcessWire, but my needs for Pluimveeweb.nl were a little different. I can't know what blocks of markup get rendered and thus, what CSS or JS to use.
+There are several great minifiers already for ProcessWire, but my needs for Pluimveeweb.nl were a little different. I couldn't know what blocks of markup get rendered and thus, what CSS or JS to use.
 
 This module allows me to use the FilenameArray, and be sure only the needed scripts and styles are pushed to the client.
 
