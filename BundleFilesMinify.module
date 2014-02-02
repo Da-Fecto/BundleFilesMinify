@@ -1,0 +1,239 @@
+<?php
+
+/**
+ * ProcessWire Bundle Files Template File
+ * 
+ * This file installs the required template and creates the page
+ * that handle the request.
+ *
+ * Copyright (C) 2014 by Martijn Geerts
+ *
+ * ProcessWire 2.x 
+ * Copyright (C) 2010 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://www.processwire.com
+ * http://www.ryancramer.com
+ *
+ * @package Bundle Files Minify
+ *
+ */
+
+class BundleFilesMinify extends WireData implements Module {
+
+	/**
+	 * constant name
+	 *
+	 */
+
+	const name = 'bundled_files';
+
+
+
+	// The URL including get variables
+	protected $bundled_url = '';
+
+
+
+	/**
+	 * getModuleInfo is a module required by all modules to tell ProcessWire about them
+	 *
+	 * @return array
+	 *
+	 */
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'Bundle Files Minify', 
+			'version' => 1, 
+			'summary' => 'Bundles javascripts & stylesheet from a FilenameArray, and serve 1 resource back to the browser',
+			'href' => 'http://www.processwire.com',
+			//'singular' => true, 
+			'autoload' => false,
+			// install MarkupCache
+ 			);
+	}
+
+
+
+	/**
+	 * Initialize the module
+	 * 
+	 * Set the first part of the returned URL
+	 *
+	 */
+
+	public function init() {
+		// First part of the URL
+		$this->bundled_url = wire('pages')->get('template=' . self::name )->url;
+	}
+
+
+
+	/**
+	 * Set FilenameArray to $this->scripts and build url
+	 *
+	 */
+
+	public function load( FilenameArray $array ) {
+		$this->createBundle($array);
+		return $this;
+	}
+
+
+
+	/**
+	 * createBundle
+	 *
+	 * This methode will construct the URL needed for the bundled_files template.
+	 *
+	 * It will create an url with 2 urlSegments:
+	 * - urlSegment1 = the extension, js or css, depending on first file in the array.  
+	 * - urlSegment2 = md5 string of the whole URL + the extension (needed for expire headers)
+	 *
+	 * All files are appended to the URL with get variables.
+	 *
+	 * Note: The methode only checks for the extension ones. If the first file extension is js,
+	 * all files in the array are considered to be javascript. Same goes for css.
+	 *
+	 * @param FilenameArray $array the filename array
+	 * @see BundleFilesMinify::$url, BundleFilesMinify::bundled_url()
+	 *
+	 */
+	
+	protected function createBundle($array) {
+		
+		$i = 1;
+		$string = '';
+
+		foreach($array as $file) {
+
+			if($i === 1) {
+				$input_key = '';
+				$info = pathinfo($file);
+				$ext = strtolower($info['extension']);
+			} else {
+				$input_key = "&file" . $i  . "=";
+			}
+
+			$script_name = str_replace(array('.' . $ext, wire('config')->urls->templates), '', $file);
+			$string .= $input_key . urlencode($script_name);
+			$i++;
+		}
+
+		$url = $this->bundled_url . $ext . "/" . md5( $ext . $string ) . "." . $ext ."?file1=" . $string;
+
+		$this->url = $url;
+		$this->bundled_url = $url;
+	}
+
+
+
+	/**
+	 * url()
+	 *
+	 * @return string The formatted URL.
+	 *
+	 */
+
+	public function url() {
+		return $this->bundled_url;
+	}
+	
+
+
+	/**
+	 * url
+	 *
+	 * Returns the formatted url, same as methode url(), here for convenience, 
+	 *
+	 * @see BundleFilesMinify::$url()
+	 * @return string The formatted URL.
+	 *
+	 */
+
+	public $url = null;	
+
+
+
+
+	/**
+	 * Install the module, create template & page
+	 *
+	 */
+
+	public function ___install() {
+		
+		$pages = wire("pages");
+		$config = wire("config");
+
+		// move template file to /site/templates/
+		$src = dirname(__FILE__) . "/" . self::name . ".php";
+		$dest = $config->paths->templates . self::name . ".php";
+		if (!file_exists($dest) && !copy($src, $dest)) {
+			$this->error("Please move " . self::name . ".php to the /site/templates/ folder.");
+		}			
+		
+
+		$fieldgroup = new fieldgroup();
+		$fieldgroup->name = self::name;
+		$fieldgroup->save();
+		
+		$template = new Template();
+		$template->name = self::name;
+		$template->fieldgroup = $fieldgroup;
+		$template->noUnpublish = 1;
+		$template->noGlobal = 1;
+		$template->useRoles = 1;
+		$template->urlSegments = 1;
+		$template->noChildren = 1;
+		$template->set('filename', dirname(__FILE__) . "/" . self::name . ".php");
+		$template->set("roles", array($config->guestUserRolePageID));
+		// needs Template::flagSystemOverride to disable
+		$template->flags = Template::flagSystem;
+		$template->save();
+		
+		$page = new Page();
+		$page->template = $template;
+		$page->parent = $config->adminRootPageID;
+		$page->title = self::name;
+		$page->addStatus(Page::statusHidden);
+		$page->save();
+
+		// Can this template be used for new pages? 
+		$template->noParents = 1;
+		$template->save();
+	}
+
+
+
+	/**
+	 * Uninstall the module, clean up
+	 *
+	 */
+
+	public function ___uninstall() {
+
+		// shorthands
+		$pages = wire("pages");
+		$config = wire("config");
+		$templates = wire("templates");
+		$fieldgroups = wire("fieldgroups");
+
+		$page = $pages->get("template=" . self::name );
+		$template = $templates->get(self::name);
+		$fieldgroup = $template->fieldgroup;
+
+		// remove page, template & fieldgroup
+		if($page->id) $page->delete();
+
+		if ($template->id) {
+			$template->flags = Template::flagSystemOverride; 
+			$template->flags = 0;
+			$templates->delete($template);
+		}			
+
+		if($fieldgroup->id) $fieldgroups->delete($fieldgroup);
+		$this->error("We didn't removed " . self::name . ".php from the /site/templates/ folder.");
+	}
+}
