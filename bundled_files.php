@@ -113,7 +113,7 @@ if($ext === 'js') {
 // set last-modified header
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $modified) . ' GMT');
 // set etag-header
-header('Etag: $etag');
+header('Etag: ' . $etag);
 // make sure caching is turned on
 header('Cache-Control: public');
 // one year to live
